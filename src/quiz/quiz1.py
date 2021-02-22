@@ -51,6 +51,39 @@ values = {
   "trillion": 1000000000000
 }
 
+def tokenizer(text):
+  raw_tokens = re.split(r"(\W)", text)
+  new_tokens = []
+
+  STARTS = ["'"]
+  ENDS = [",", ".", "'"]
+
+  def aux(token):
+    start = next((s for s in STARTS if token.startswith(s)), None)
+    if start:
+      n = len(start)
+      t1 = token[:n]
+      t2 = token[n:]
+      new_tokens.append(t1)
+      aux(t2)
+      return
+
+    end = next((e for e in ENDS if token.endswith(e)), None)
+    if end:
+      n = len(end)
+      t1 = token[:-n]
+      t2 = token[-n:]
+      aux(t1)
+      new_tokens.append(t2)
+      return
+
+    new_tokens.append(token)
+
+  for token in raw_tokens:
+    aux(token)
+
+  return new_tokens
+
 
 def convert(number):
   multiple = 0
@@ -74,7 +107,8 @@ def convert(number):
 
 def normalize(text):
   # split tokens at space, period or hyphen
-  tokens = re.split(r"[\s-]", text)
+  delimiter = re.compile(r"\W")
+  tokens = tokenizer(text)
   length = len(tokens)
 
   number = []
@@ -84,15 +118,24 @@ def normalize(text):
   while index < length:
     token = tokens[index]
     lower = token.lower()
+    after = next((x for x in tokens[index + 1:] if not delimiter.match(x)), None)
 
     if lower in values:
       number.append(lower)
-    elif ((lower == "a" or lower == "an") and (index + 1 < length) and (tokens[index + 1].lower() in values)):
+
+    elif ((lower == "a" or lower == "an") and (after in values)):
       number.append("one")
+
+    elif number and after not in values:
+      output.append(convert(number))
+      output.append(token)
+      number = []
+
+    elif delimiter.match(token):
+      if not number:
+        output.append(token)
+
     else:
-      if number:
-        output.append(convert(number))
-        number = []
       output.append(token)
 
     index += 1
@@ -100,7 +143,8 @@ def normalize(text):
   if number:
     output.append(convert(number))
 
-  return " ".join(output)
+  print("".join(output))
+  return "".join(output)
 
 
 def normalize_extra(text):
@@ -113,7 +157,7 @@ if __name__ == '__main__':
     'I met twelve people',
     'I have one brother and two sisters',
     'A year has three hundred sixty five days',
-    'I made a million dollars',
+    'I made a million, dollars',
     'I can count to twelve million two-hundred-five thousand six-hundred-thirty-three',
   ]
 
@@ -121,7 +165,7 @@ if __name__ == '__main__':
     'I met 12 people',
     'I have 1 brother and 2 sisters',
     'A year has 365 days',
-    'I made 1000000 dollars',
+    'I made 1000000, dollars',
     'I can count to 12205633',
   ]
 

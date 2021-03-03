@@ -78,7 +78,7 @@ def paths(sense_0: str, sense_1: str) -> List[List[Synset]]:
           final_path = path_0[::-1] + path_1[1:]
           result.append(final_path)
 
-    return result if result else list(list())
+    return result or list(list())
 
 
 if __name__ == '__main__':
